@@ -5,9 +5,11 @@ require('dotenv').config()
 const router= express.Router()
 const BankUser=require('../schema/users')
 
-const randomGenerator = (n) => {
+let randomGenerator = (n) => {
     let res = Math.floor(Math.random()*Math.pow(10, n))+1
     res = String(res)
+    while(res.length<n)
+        res = res+String(Math.floor(10*Math.random())+1)
     return res
 }
 
@@ -55,6 +57,5 @@ router.post('/login', async (req, res)=>{
         return res.status(401).send('Internal Server Error')
     }
 })
-
 
 module.exports= router

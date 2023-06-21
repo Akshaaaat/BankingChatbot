@@ -1,8 +1,7 @@
 const express= require('express')
 const connectToDb=require('./db')
 const auth=require('./routes/auth')
-const fetch = require('node-fetch')
-const devices = require('./routes/device')
+const transactions = require('./routes/transaction')
 require('dotenv').config()
 const port= 3000;
 const cors = require('cors')
@@ -15,7 +14,7 @@ app.get('/', (req, res)=>{
 })
 
 app.use('/api/auth', auth)
-app.use('/api/transactions', devices)
+app.use('/api/transactions', transactions)
 
 const start = async () =>{
     try {
