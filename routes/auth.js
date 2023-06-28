@@ -51,7 +51,7 @@ router.post('/login', async (req, res)=>{
         
         const userId=findUser._id
         const auth_token=jwt.sign({'userId':userId}, process.env.JWT_SECRET)
-        res.status(201).json({'auth-token': auth_token, email:email})
+        res.status(201).json({'auth-token': auth_token, email:email, name: findUser.name})
 
     } catch (error) {
         return res.status(401).send('Internal Server Error')

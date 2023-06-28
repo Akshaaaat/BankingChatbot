@@ -16,18 +16,18 @@ let randomGenerator = (n) => {
     return res
 }
 
-router.post('/transfer', fetchuser, async (req, res)=>{    //PC compare pwd here also..same as login
+router.post('/transfer', fetchuser, async (req, res)=>{
     try {
-        const {email, bank, toBank, toEmail, amount}=req.body
+        const {toEmail, amount}=req.body
         const userId=req.userId
         const username= await BankUser.findById(userId)
         if(amount<0)
             return res.status(404).json({"err": "One should send a positive amount (where positive means any number greater than zero"})
-        if(!username || username.bankAccountNumber!=bank)
+        if(!username)
             return res.status(404).send({"err": "user not found"})
 
         const recipient = await BankUser.findOne({email: toEmail})
-        if(!recipient || recipient.bankAccountNumber!=toBank)
+        if(!recipient)
         return res.status(404).send({"err": "Recipient with the given credentials not found"})
         
         if(username.bankBalance<amount)
@@ -47,10 +47,10 @@ router.post('/transfer', fetchuser, async (req, res)=>{    //PC compare pwd here
 
         let newTransaction = await Transactions.create({
             transactionId: tranId,
-            fromEmail: email,
+            fromEmail: username.email,
             toEmail: toEmail,
-            fromBank: bank,
-            toBank: toBank,
+            fromBank: username.bankAccountNumber,
+            toBank: recipient.bankAccountNumber,
             amount
         })
         return res.status(201).json({newTransaction})
@@ -59,30 +59,29 @@ router.post('/transfer', fetchuser, async (req, res)=>{    //PC compare pwd here
     }  
 })
 
-router.post('/addmoney', fetchuser, async (req, res)=>{    //PC compare pwd here also..same as login
+router.post('/addmoney', fetchuser, async (req, res)=>{
     try {
-        const {email, bank, amount}=req.body
+        const {amount}=req.body
         const userId=req.userId
         const username= await BankUser.findById(userId)
         if(amount<0)
             return res.status(404).json({"err": "One should send a positive amount (where positive means any number greater than zero"})
-        if(!username || username.bankAccountNumber!=bank)
+        if(!username)
             return res.status(404).send({"err": "user not found"})
-  
-        const deductMoney = await BankUser.findByIdAndUpdate(userId, {bankBalance: username.bankBalance+amount})
-        if(!deductMoney)
+            const deductMoney = await BankUser.findByIdAndUpdate(userId, {bankBalance: username.bankBalance+amount})
+            if(!deductMoney)
             return res.status(401).json({"err": "Error occured. Money has not been deducted"}) 
         
         const tranId = randomGenerator(16)
-
         let newTransaction = await Transactions.create({
             transactionId: tranId,
             fromEmail: "N.A.",
-            toEmail: email,
+            toEmail: username.email,
             fromBank: "-",
-            toBank: bank,
+            toBank: username.bankAccountNumber,
             amount
         })
+        console.log("added money to", newTransaction.toEmail, newTransaction.amount)
         return res.status(201).json({newTransaction})
     } catch (error) {
         return res.status(400).send('Internal Server Error')
@@ -91,9 +90,9 @@ router.post('/addmoney', fetchuser, async (req, res)=>{    //PC compare pwd here
 
 router.get('/list', fetchuser, async (req, res)=>{
     try {
-        const {email, bank} = req.body
         const userId = req.userId
-
+        const bankuser= await BankUser.findById(userId)
+        const email = bankuser.email
         let logList  = await Transactions.find({
             $or: [
                 { fromEmail: email },
