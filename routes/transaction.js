@@ -22,7 +22,7 @@ router.post('/transfer', fetchuser, async (req, res)=>{
         const userId=req.userId
         const username= await BankUser.findById(userId)
         if(amount<0)
-            return res.status(404).json({"err": "One should send a positive amount (where positive means any number greater than zero"})
+            return res.status(404).send({"err": "One should send a positive amount (where positive means any number greater than zero"})
         if(!username)
             return res.status(404).send({"err": "user not found"})
 
@@ -35,12 +35,11 @@ router.post('/transfer', fetchuser, async (req, res)=>{
         
         const deductMoney = await BankUser.findByIdAndUpdate(userId, {bankBalance: username.bankBalance-amount})
         if(!deductMoney)
-            return res.status(401).json({"err": "Error occured. Money has not been deducted"})
+            return res.status(401).send({"err": "Error occured. Money has not been deducted"})
 
         const recievedMoney = await BankUser.findOneAndUpdate({email: toEmail}, {bankBalance: recipient.bankBalance+amount})
         if(!recievedMoney){
-            console.log('Couldnt transfer money to the given account...However money has been deducted')
-            return res.status(401).json({"err": "Money deducted but can't be credited to the given account"})
+            return res.status(401).send({"err": "Money deducted but can't be credited to the given account"})
         } 
         
         const tranId = randomGenerator(15)
@@ -55,7 +54,7 @@ router.post('/transfer', fetchuser, async (req, res)=>{
         })
         return res.status(201).json({newTransaction})
     } catch (error) {
-        return res.status(400).send('Internal Server Error')
+        return res.status(400).send({"err": "Internal Server Error"})
     }  
 })
 
@@ -84,7 +83,7 @@ router.post('/addmoney', fetchuser, async (req, res)=>{
         console.log("added money to", newTransaction.toEmail, newTransaction.amount)
         return res.status(201).json({newTransaction})
     } catch (error) {
-        return res.status(400).send('Internal Server Error')
+        return res.status(400).send({"err": 'Internal Server Error'})
     }  
 })
 
@@ -106,7 +105,7 @@ router.get('/list', fetchuser, async (req, res)=>{
                 "message": "Logs not found",
                 req
             })
-            return res.status(404).send("Logs Found'nt")
+            return res.status(404).send({err: "Logs Found'nt"})
         }
         
         if(req.body.date){  //We filter out the data before this date
@@ -123,7 +122,7 @@ router.get('/list', fetchuser, async (req, res)=>{
             "message": "Successfully fetched logs",
             "req": JSON.parse(JSON.stringify(req.body))
         })
-        return res.status(200).send(logList)
+        return res.status(200).send(logList.slice(0, 10))
     } catch (error) {
         return res.status(401).json({"err": "Internal Server Error"})
     }

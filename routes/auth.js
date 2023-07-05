@@ -19,7 +19,7 @@ router.post('/createuser',async (req, res)=>{
 
         let newUser= await BankUser.findOne({email: email})
         if(newUser){
-            return res.status(401).send("A user alredy exists with this email")
+            return res.status(401).json({"err": "A user alredy exists with this email"})
         }
         const bankAccountNumber = randomGenerator(12)
 
@@ -34,7 +34,7 @@ router.post('/createuser',async (req, res)=>{
         res.status(201).send({email, name, 'auth-token':auth_token, bankAccountNumber})
 
     } catch (error) {
-        return res.status(401).send('Internal Server Error')
+        return res.status(401).send({"err": "Internal Server Error"})
     }
 })
 
@@ -43,18 +43,18 @@ router.post('/login', async (req, res)=>{
         const {email, pwd}=req.body
         const findUser= await BankUser.findOne({email: email})
         if(!findUser)
-        return res.status(404).send("Invalid User Credentials")
+        return res.status(404).send({"err": "Invalid User Credentials"})
         
         const passwordCompare = await bcrypt.compare(pwd, findUser.pwd)
         if(!passwordCompare)
-        return res.status(404).send("Invalid User Credentials")
+        return res.status(404).send({"err": "Invalid User Credentials"})
         
         const userId=findUser._id
         const auth_token=jwt.sign({'userId':userId}, process.env.JWT_SECRET)
-        res.status(201).json({'auth-token': auth_token, email:email, name: findUser.name})
+        res.status(201).send({'auth-token': auth_token, email:email, name: findUser.name})
 
     } catch (error) {
-        return res.status(401).send('Internal Server Error')
+        return res.status(401).send({'err': 'Internal Server Error'})
     }
 })
 

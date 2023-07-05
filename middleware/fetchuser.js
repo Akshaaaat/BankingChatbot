@@ -8,7 +8,7 @@ const fetchuser = async (req, res, next) => {
   try {
     token = req.header("auth-token");
     if (!token) {
-      return res.status(401).json({ error: "Authenticate using a valid token" });
+      return res.status(401).send({ "err": "Authenticate using a valid token" });
     }  
     const data = jwt.verify(token, process.env.JWT_SECRET);
     req.userId= data.userId;
