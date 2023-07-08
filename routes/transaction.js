@@ -26,7 +26,10 @@ router.post('/transfer', fetchuser, async (req, res)=>{
         if(!username)
             return res.status(404).send({"err": "user not found"})
 
-        const recipient = await BankUser.findOne({email: toEmail})
+        const recipient = await BankUser.findOne({
+            $or: [ { email: toEmail }, { bankAccountNumber: toEmail }]
+        })
+        console.log('lmao dude')
         if(!recipient)
         return res.status(404).send({"err": "Recipient with the given credentials not found"})
         
@@ -37,7 +40,12 @@ router.post('/transfer', fetchuser, async (req, res)=>{
         if(!deductMoney)
             return res.status(401).send({"err": "Error occured. Money has not been deducted"})
 
-        const recievedMoney = await BankUser.findOneAndUpdate({email: toEmail}, {bankBalance: recipient.bankBalance+amount})
+        const recievedMoney = await BankUser.findOneAndUpdate({
+            $or: [ { email: toEmail }, { bankAccountNumber: toEmail }]
+        }, {
+            bankBalance: recipient.bankBalance+amount
+        })
+
         if(!recievedMoney){
             return res.status(401).send({"err": "Money deducted but can't be credited to the given account"})
         } 
@@ -47,7 +55,7 @@ router.post('/transfer', fetchuser, async (req, res)=>{
         let newTransaction = await Transactions.create({
             transactionId: tranId,
             fromEmail: username.email,
-            toEmail: toEmail,
+            toEmail: recipient.email,
             fromBank: username.bankAccountNumber,
             toBank: recipient.bankAccountNumber,
             amount

@@ -13,9 +13,19 @@ let randomGenerator = (n) => {
     return res
 }
 
+const isItValidPin = (str) =>{
+    if (typeof str != "string" || str.length!=6) return false // we only process strings!  
+    return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+           !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+}
+
 router.post('/createuser',async (req, res)=>{
     try {
         const {email, name, pwd}= req.body
+        
+
+        // if(!isItValidPin(pin) )      
+        //     return res.status(400).send({"err": "Invalid PIN type"})
 
         let newUser= await BankUser.findOne({email: email})
         if(newUser){

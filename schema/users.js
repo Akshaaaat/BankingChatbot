@@ -19,6 +19,9 @@ const userSchema = new mongoose.Schema({
     },
     bankAccountNumber:{
         type: String
+    },
+    pin:{
+        type: String
     }
 })
 module.exports = mongoose.model('BankUser', userSchema)
