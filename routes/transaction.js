@@ -3,7 +3,6 @@ const bcrypt= require("bcrypt")
 const jwt=require('jsonwebtoken')
 require('dotenv').config()
 const BankUser=require('../schema/users')
-const SystemLogs = require('../schema/systemlogs')
 const Transactions= require('../schema/transaction')
 const fetchuser= require('../middleware/fetchuser')
 const router= express.Router()
@@ -16,20 +15,30 @@ let randomGenerator = (n) => {
     return res
 }
 
+const stringdate = () =>{
+    const currentDate = new Date();
+    const date = currentDate.getDate().toString().padStart(2, '0');
+    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
+    const year = currentDate.getFullYear().toString().slice(-2);
+    const hours = currentDate.getHours().toString().padStart(2, '0');
+    const minutes = currentDate.getMinutes().toString().padStart(2, '0'); 
+    return `${date}:${month}:${year} ${hours}:${minutes}`;
+}
+
 router.post('/transfer', fetchuser, async (req, res)=>{
     try {
         const {toEmail, amount}=req.body
         const userId=req.userId
         const username= await BankUser.findById(userId)
         if(amount<0)
-            return res.status(404).send({"err": "One should send a positive amount (where positive means any number greater than zero"})
+            return res.status(404).send({"err": "Amount Should be Positive"})
         if(!username)
-            return res.status(404).send({"err": "user not found"})
+            return res.status(404).send({"err": "User not found"})
 
         const recipient = await BankUser.findOne({
             $or: [ { email: toEmail }, { bankAccountNumber: toEmail }]
         })
-        console.log('lmao dude')
+       
         if(!recipient)
         return res.status(404).send({"err": "Recipient with the given credentials not found"})
         
@@ -38,7 +47,7 @@ router.post('/transfer', fetchuser, async (req, res)=>{
         
         const deductMoney = await BankUser.findByIdAndUpdate(userId, {bankBalance: username.bankBalance-amount})
         if(!deductMoney)
-            return res.status(401).send({"err": "Error occured. Money has not been deducted"})
+            return res.status(401).send({"err": "Transaction Failed. Money has not been deducted"})
 
         const recievedMoney = await BankUser.findOneAndUpdate({
             $or: [ { email: toEmail }, { bankAccountNumber: toEmail }]
@@ -51,14 +60,14 @@ router.post('/transfer', fetchuser, async (req, res)=>{
         } 
         
         const tranId = randomGenerator(15)
-
         let newTransaction = await Transactions.create({
             transactionId: tranId,
             fromEmail: username.email,
             toEmail: recipient.email,
             fromBank: username.bankAccountNumber,
             toBank: recipient.bankAccountNumber,
-            amount
+            amount ,
+            date: stringdate()
         })
         return res.status(201).json({newTransaction})
     } catch (error) {
@@ -72,12 +81,12 @@ router.post('/addmoney', fetchuser, async (req, res)=>{
         const userId=req.userId
         const username= await BankUser.findById(userId)
         if(amount<0)
-            return res.status(404).json({"err": "One should send a positive amount (where positive means any number greater than zero"})
+            return res.status(404).json({"err": "Send Positive Amount"})
         if(!username)
-            return res.status(404).send({"err": "user not found"})
+            return res.status(404).send({"err": "User Not Found"})
             const deductMoney = await BankUser.findByIdAndUpdate(userId, {bankBalance: username.bankBalance+amount})
             if(!deductMoney)
-            return res.status(401).json({"err": "Error occured. Money has not been deducted"}) 
+            return res.status(401).json({"err": "Transaction Failed"}) 
         
         const tranId = randomGenerator(16)
         let newTransaction = await Transactions.create({
@@ -88,7 +97,6 @@ router.post('/addmoney', fetchuser, async (req, res)=>{
             toBank: username.bankAccountNumber,
             amount
         })
-        console.log("added money to", newTransaction.toEmail, newTransaction.amount)
         return res.status(201).json({newTransaction})
     } catch (error) {
         return res.status(400).send({"err": 'Internal Server Error'})
@@ -110,7 +118,7 @@ router.get('/list', fetchuser, async (req, res)=>{
             SystemLogs.create({
                 "status": "err",
                 "action": "Get Transaction Logs",
-                "message": "Logs not found",
+                "message": "Logs Not Found",
                 req
             })
             return res.status(404).send({err: "Logs Found'nt"})
@@ -123,14 +131,8 @@ router.get('/list', fetchuser, async (req, res)=>{
                     return (cutoff<=eee.date)
                 })
         }
-
-        SystemLogs.create({
-            "status": "success",
-            "action": "Get Transaction Logs",
-            "message": "Successfully fetched logs",
-            "req": JSON.parse(JSON.stringify(req.body))
-        })
-        return res.status(200).send(logList.slice(0, 10))
+        //This function return the upto 10 logs
+        return res.status(200).send((logList.reverse()).slice(0, 10))
     } catch (error) {
         return res.status(401).json({"err": "Internal Server Error"})
     }
@@ -142,53 +144,13 @@ router.get('/getdetails', fetchuser, async (req, res)=>{
         const username = await BankUser.findById(userId).select('-pwd')
         
         if(!username){
-            SystemLogs.create({
-                "status": "err",
-                "action": "Get User Details",
-                "message": "User Not Found",
-                "req": JSON.parse(JSON.stringify(req.body))
-            })
             return res.status(400).json({"err": "Cannot Find User"})
         }
-        SystemLogs.create({
-            "status": "success",
-            "action": "Get User Details",
-            "message": "Successfully Fetched all Details",
-            "req": JSON.parse(JSON.stringify(req.body))
-        })
         return res.status(200).send(username)
 
     } catch (error) {
         return res.status(400).json({"err": "Internal Server Error"})
     }
 })
-
-// router.get('/systemlogs', fetchuser, async (req, res) =>{
-//     try {
-//         const {email} = req.body
-//         const userId = req.userId
-
-
-       
-        
-//         // if(req.body.date){  //We filter out the data before this date
-//         //     var cutoff = new Date(Date.parse(req.body.date))
-            
-//         //     logList = logList.filter((eee)=>{
-//         //             return (cutoff<=eee.date)
-//         //         })
-//         // }
-
-//         SystemLogs.create({
-//             "status": "success",
-//             "action": "Get Transaction Logs",
-//             "message": "Successfully fetched logs",
-//             "req": JSON.parse(JSON.stringify(req.body))
-//         })
-//         return res.status(200).send(logList)
-//     } catch (error) {
-//         return res.status(401).json({"err": "Internal Server Error"})
-//     }
-// })
 
 module.exports=router
